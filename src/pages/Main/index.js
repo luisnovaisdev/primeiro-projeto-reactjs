@@ -4,13 +4,14 @@ import { Link } from 'react-router-dom';
 
 import api from '../../services/api';
 import Container from '../../components/Container';
-import { Form, SubmitButton, List } from './styles';
+import { Form, SubmitButton, List, Input } from './styles';
 
 export default class Main extends Component {
   state = {
     newRepo: '',
     repositories: [],
     loading: false,
+    inputError: false,
   };
 
   componentDidMount() {
@@ -29,6 +30,7 @@ export default class Main extends Component {
   }
 
   handleInputChange = e => {
+    this.setState({ inputError: false });
     this.setState({ newRepo: e.target.value });
   };
 
@@ -38,23 +40,35 @@ export default class Main extends Component {
 
     this.setState({ loading: true });
 
-    const response = await api.get(`/repos/${newRepo}`);
+    try {
+      repositories.map(repository => {
+        if (repository.name === newRepo) {
+          throw new Error('Repositório duplicado');
+        }
+        return repository;
+      });
 
-    console.log(response.data);
+      const response = await api.get(`/repos/${newRepo}`);
 
-    const data = {
-      name: response.data.full_name,
-    };
+      console.log(response.data);
 
-    this.setState({
-      repositories: [...repositories, data],
-      newRepo: '',
-      loading: false,
-    });
+      const data = {
+        name: response.data.full_name,
+      };
+
+      this.setState({
+        repositories: [...repositories, data],
+        newRepo: '',
+        loading: false,
+      });
+    } catch (error) {
+      console.log(error);
+      this.setState({ inputError: true, loading: false });
+    }
   };
 
   render() {
-    const { newRepo, repositories, loading } = this.state;
+    const { newRepo, repositories, loading, inputError } = this.state;
     return (
       <Container>
         <h1>
@@ -62,11 +76,12 @@ export default class Main extends Component {
           Repositories
         </h1>
         <Form onSubmit={this.handleSubmit}>
-          <input
+          <Input
             type="text"
             placeholder="Adicionar repositorio"
             value={newRepo}
             onChange={this.handleInputChange}
+            error={inputError}
           />
           <SubmitButton loading={loading}>
             {loading ? (
